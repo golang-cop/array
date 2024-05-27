@@ -1,0 +1,6 @@
+github.com/golang-oop/error v0.0.0-20240527134905-0411e80eb557 h1:zqlCRV/ims5vWmBp+s9fkAi7HaM4ie2JCGlIUeoC0eo=
+github.com/golang-oop/error v0.0.0-20240527134905-0411e80eb557/go.mod h1:BUOCKtvB/+8SaYImGivuaEXzQ6dSivw1l/ijzn9nf08=
+github.com/golang-oop/null v0.0.0-20240527135322-5ea6aaed8bf9 h1:d73lKALtDzCzEuG2Bzg/p9+ncZjqKZkv+aIyblPsM2I=
+github.com/golang-oop/null v0.0.0-20240527135322-5ea6aaed8bf9/go.mod h1:+45K2m29Bz4n6+BDePrWwxOiPMOAgJ6JDi26XyiCVig=
+github.com/golang-oop/result v0.0.0-20240527141542-cb3939bd2b03 h1:qElN/EKEDvtW3XwlHOy0spV6F2ARvnUPiBd6tMkhaAk=
+github.com/golang-oop/result v0.0.0-20240527141542-cb3939bd2b03/go.mod h1:uxc2qGaZN271TGS0vONMs+q4nLTUa1VnEoda2wA0Qa8=

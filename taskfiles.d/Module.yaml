@@ -1,0 +1,18 @@
+version: "3"
+
+tasks:
+  init:
+    desc: Initialize the Go module
+    cmds:
+    - |
+    
+      go mod init github.com/golang-oop/array
+
+  requirements:
+    desc: Add module requirements and sums
+    cmds:
+    - |
+    
+      go clean -modcache
+      go get github.com/golang-oop/result
+      go mod tidy
