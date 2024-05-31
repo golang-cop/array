@@ -53,6 +53,9 @@ func (d *data) Each(
 	return Result.New()
 }
 
+/*
+Add a new item to the end of the Array.
+*/
 func (d *data) Push(item interface{}) Result.Interface {
 	temp := append(d.value, item)
 	d.value = temp
@@ -60,6 +63,10 @@ func (d *data) Push(item interface{}) Result.Interface {
 		Result.WithPayload(d),
 	)
 }
+
+/*
+Remove the last item of the Array.
+*/
 func (d *data) Pop() Result.Interface {
 	size := len(d.value)
 	item := (d.value)[size-1]
