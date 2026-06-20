@@ -3,8 +3,8 @@ package Array
 import (
 	"testing"
 
-	Error "github.com/golang-oop/error/src"
-	Result "github.com/golang-oop/result/src"
+	Error "github.com/golang-cop/error/src"
+	Result "github.com/golang-cop/result/src"
 )
 
 // errResult builds a Result that reports HasError() == true so that the
