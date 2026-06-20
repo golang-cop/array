@@ -2,6 +2,8 @@
 
 # array
 
+[![ci](https://github.com/go-composites/array/actions/workflows/ci.yml/badge.svg)](https://github.com/go-composites/array/actions/workflows/ci.yml)
+
 The ordered-collection composite of [go-composites](https://github.com/go-composites).
 An `Array` holds `interface{}` items and exposes both stack-like access and
 functional combinators, all returning a [`Result`](https://github.com/go-composites/result)
