@@ -2,6 +2,7 @@ package Array
 
 import (
 	"reflect"
+	"sort"
 
 	Error "github.com/go-composites/error/src"
 	Result "github.com/go-composites/result/src"
@@ -28,6 +29,9 @@ type Interface interface {
 	Insert(index int, item interface{}) Result.Interface
 	Delete(index int) Result.Interface
 	Reverse() Result.Interface
+	Sort(less func(a, b interface{}) bool) Result.Interface
+	IndexOf(item interface{}) Result.Interface
+	Slice(start, end int) Result.Interface
 	IsNull() bool
 }
 
@@ -184,6 +188,75 @@ func (d *data) Reverse() Result.Interface {
 	return Result.New(
 		Result.WithPayload(Interface(d)),
 	)
+}
+
+// Sort orders an Array of interface{} in place using sort.SliceStable with
+// less; the payload is the slice header's backing Array.
+func Sort(
+	items []interface{},
+	less func(a, b interface{}) bool,
+) Result.Interface {
+	sort.SliceStable(items, func(i, j int) bool {
+		return less(items[i], items[j])
+	})
+	return Result.New(
+		Result.WithPayload(items),
+	)
+}
+
+// Sort orders the Array in place using sort.SliceStable with less; the payload
+// is the Array itself.
+func (d *data) Sort(less func(a, b interface{}) bool) Result.Interface {
+	sort.SliceStable(d.value, func(i, j int) bool {
+		return less(d.value[i], d.value[j])
+	})
+	return Result.New(
+		Result.WithPayload(Interface(d)),
+	)
+}
+
+// IndexOf returns, as a Result whose payload is a Go int, the index of the
+// first element of an Array of interface{} equal to item (compared with
+// reflect.DeepEqual), or -1 when no element matches.
+func IndexOf(items []interface{}, item interface{}) Result.Interface {
+	for index, candidate := range items {
+		if reflect.DeepEqual(candidate, item) {
+			return Result.New(Result.WithPayload(index))
+		}
+	}
+	return Result.New(Result.WithPayload(-1))
+}
+
+// IndexOf returns, as a Result whose payload is a Go int, the index of the
+// first element equal to item (compared with reflect.DeepEqual), or -1 when no
+// element matches.
+func (d data) IndexOf(item interface{}) Result.Interface {
+	return IndexOf(d.value, item)
+}
+
+// Slice returns a Result whose payload is a NEW independent Array.Interface
+// holding the elements [start:end) of an Array of interface{}. It yields an
+// error Result when start<0 || end>len(items) || start>end.
+func Slice(items []interface{}, start, end int) Result.Interface {
+	if start < 0 || end > len(items) || start > end {
+		return Result.New(
+			Result.WithError(Error.New("Array.Slice: index out of range")),
+		)
+	}
+	out := &data{
+		value: make([]interface{}, end-start),
+	}
+	copy(out.value, items[start:end])
+	return Result.New(
+		Result.WithPayload(Interface(out)),
+	)
+}
+
+// Slice returns a Result whose payload is a NEW independent Array.Interface
+// holding the elements [start:end). It yields an error Result when start<0 ||
+// end>Len() || start>end.
+func (d data) Slice(start, end int) Result.Interface {
+	return Slice(d.value, start, end)
 }
 
 // IsNull reports that this is a real (non-null) Array.
@@ -521,6 +594,23 @@ func (n *null) Delete(index int) Result.Interface {
 
 func (n *null) Reverse() Result.Interface {
 	return Result.New(Result.WithPayload(Interface(n)))
+}
+
+// Sort on the null Array is a successful no-op whose payload is the null Array.
+func (n *null) Sort(less func(a, b interface{}) bool) Result.Interface {
+	return Result.New(Result.WithPayload(Interface(n)))
+}
+
+// IndexOf on the null Array always reports absence with a payload of -1.
+func (n *null) IndexOf(item interface{}) Result.Interface {
+	return Result.New(Result.WithPayload(-1))
+}
+
+// Slice on the null Array returns an empty Array.Interface for the only valid
+// empty request (0,0) and an error Result for any out-of-range request,
+// consistent with the data variant over an empty backing slice.
+func (n *null) Slice(start, end int) Result.Interface {
+	return Slice(nil, start, end)
 }
 
 // IsNull reports that this is the null Array.

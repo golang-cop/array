@@ -411,6 +411,127 @@ func TestFind(t *testing.T) {
 	}
 }
 
+func TestSort(t *testing.T) {
+	a := New()
+	a.Push(3)
+	a.Push(1)
+	a.Push(2)
+	less := func(x, y interface{}) bool { return x.(int) < y.(int) }
+	res := a.Sort(less)
+	if res.HasError() {
+		t.Fatal("Sort: unexpected error")
+	}
+	if res.Payload().(Interface) != a {
+		t.Fatal("Sort payload should be the Array itself")
+	}
+	if a.First().Payload() != 1 || a.Last().Payload() != 3 {
+		t.Fatalf("after Sort = %v..%v, want 1..3", a.First().Payload(), a.Last().Payload())
+	}
+
+	// Package-level twin.
+	items := []interface{}{"c", "a", "b"}
+	pr := Sort(items, func(x, y interface{}) bool { return x.(string) < y.(string) })
+	if pr.HasError() {
+		t.Fatal("package Sort: unexpected error")
+	}
+	if items[0] != "a" || items[2] != "c" {
+		t.Fatalf("package Sort = %v, want sorted", items)
+	}
+}
+
+func TestIndexOf(t *testing.T) {
+	a := New()
+	a.Push("a")
+	a.Push([]int{1, 2})
+	a.Push("c")
+
+	if got := a.IndexOf("a").Payload(); got != 0 {
+		t.Fatalf("IndexOf(a) = %v, want 0", got)
+	}
+	if got := a.IndexOf([]int{1, 2}).Payload(); got != 1 {
+		t.Fatalf("IndexOf deep = %v, want 1", got)
+	}
+	if got := a.IndexOf("missing").Payload(); got != -1 {
+		t.Fatalf("IndexOf(missing) = %v, want -1", got)
+	}
+
+	// Package-level twin.
+	if got := IndexOf([]interface{}{1, 2, 3}, 3).Payload(); got != 2 {
+		t.Fatalf("package IndexOf hit = %v, want 2", got)
+	}
+	if got := IndexOf([]interface{}{1, 2, 3}, 9).Payload(); got != -1 {
+		t.Fatalf("package IndexOf miss = %v, want -1", got)
+	}
+}
+
+func TestSlice(t *testing.T) {
+	a := New()
+	a.Push(0)
+	a.Push(1)
+	a.Push(2)
+	a.Push(3)
+
+	res := a.Slice(1, 3)
+	if res.HasError() {
+		t.Fatal("Slice(1,3) unexpected error")
+	}
+	out := res.Payload().(Interface)
+	if out.Len() != 2 || out.First().Payload() != 1 || out.Last().Payload() != 2 {
+		t.Fatalf("Slice(1,3) = %v..%v len %d", out.First().Payload(), out.Last().Payload(), out.Len())
+	}
+
+	// Independence: mutating the slice must not affect the original.
+	out.Push(99)
+	if a.Len() != 4 {
+		t.Fatalf("original len = %d after mutating slice, want 4", a.Len())
+	}
+
+	// Out-of-range branches.
+	if !a.Slice(-1, 2).HasError() {
+		t.Fatal("Slice(-1,2) want error")
+	}
+	if !a.Slice(0, a.Len()+1).HasError() {
+		t.Fatal("Slice(0,>Len) want error")
+	}
+	if !a.Slice(3, 1).HasError() {
+		t.Fatal("Slice(3,1) want error (start>end)")
+	}
+
+	// Package-level twin: valid and error.
+	if Slice([]interface{}{1, 2, 3}, 0, 2).HasError() {
+		t.Fatal("package Slice(0,2) unexpected error")
+	}
+	if !Slice([]interface{}{1, 2, 3}, 0, 9).HasError() {
+		t.Fatal("package Slice(0,9) want error")
+	}
+}
+
+func TestNullSortIndexOfSlice(t *testing.T) {
+	n := Null()
+
+	sr := n.Sort(func(a, b interface{}) bool { return true })
+	if sr.HasError() || !sr.Payload().(Interface).IsNull() {
+		t.Fatal("null Sort should succeed with null payload")
+	}
+
+	if n.IndexOf("x").Payload() != -1 {
+		t.Fatal("null IndexOf want -1")
+	}
+
+	// Valid empty slice.
+	er := n.Slice(0, 0)
+	if er.HasError() {
+		t.Fatal("null Slice(0,0) unexpected error")
+	}
+	if er.Payload().(Interface).Len() != 0 {
+		t.Fatal("null Slice(0,0) should be empty array")
+	}
+	// Out-of-range.
+	if !n.Slice(0, 1).HasError() {
+		t.Fatal("null Slice(0,1) want error")
+	}
+}
+
 func TestAnyAll(t *testing.T) {
 	a := New()
 	a.Push(2)
