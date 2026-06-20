@@ -6,7 +6,7 @@ tasks:
     cmds:
     - |
     
-      go mod init github.com/golang-cop/array
+      go mod init github.com/go-composites/array
 
   requirements:
     desc: Add module requirements and sums
@@ -14,5 +14,5 @@ tasks:
     - |
     
       go clean -modcache
-      go get github.com/golang-cop/result
+      go get github.com/go-composites/result
       go mod tidy

@@ -1,6 +1,6 @@
 package Array
 
-import Result "github.com/golang-cop/result/src"
+import Result "github.com/go-composites/result/src"
 
 type Interface interface {
 	Each(fn func(int, interface{}) Result.Interface) Result.Interface

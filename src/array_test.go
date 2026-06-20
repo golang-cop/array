@@ -3,8 +3,8 @@ package Array
 import (
 	"testing"
 
-	Error "github.com/golang-cop/error/src"
-	Result "github.com/golang-cop/result/src"
+	Error "github.com/go-composites/error/src"
+	Result "github.com/go-composites/result/src"
 )
 
 // errResult builds a Result that reports HasError() == true so the Each
