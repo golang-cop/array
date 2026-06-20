@@ -1,6 +1,8 @@
 package Array
 
 import (
+	"reflect"
+
 	Error "github.com/go-composites/error/src"
 	Result "github.com/go-composites/result/src"
 )
@@ -20,6 +22,13 @@ type Interface interface {
 	Last() Result.Interface
 	Clear() Result.Interface
 	Copy() Result.Interface
+	Len() int
+	IsEmpty() bool
+	Contains(item interface{}) Result.Interface
+	Insert(index int, item interface{}) Result.Interface
+	Delete(index int) Result.Interface
+	Reverse() Result.Interface
+	IsNull() bool
 }
 
 type data struct {
@@ -105,7 +114,81 @@ func (d *data) Clear() Result.Interface {
 	return Result.New()
 }
 func (d data) Copy() Result.Interface {
-	return Result.New()
+	out := &data{
+		value: make([]interface{}, len(d.value)),
+	}
+	copy(out.value, d.value)
+	return Result.New(
+		Result.WithPayload(Interface(out)),
+	)
+}
+
+// Len returns the number of elements in the Array.
+func (d data) Len() int {
+	return len(d.value)
+}
+
+// IsEmpty reports whether the Array has no elements.
+func (d data) IsEmpty() bool {
+	return len(d.value) == 0
+}
+
+// Contains reports, as a Result whose payload is a Go bool, whether item is
+// present in the Array (compared with reflect.DeepEqual).
+func (d data) Contains(item interface{}) Result.Interface {
+	for _, candidate := range d.value {
+		if reflect.DeepEqual(candidate, item) {
+			return Result.New(Result.WithPayload(true))
+		}
+	}
+	return Result.New(Result.WithPayload(false))
+}
+
+// Insert places item at index, shifting the tail right. A valid index ranges
+// from 0 to Len() inclusive (Len() appends). Out-of-range indices yield an
+// error Result; on success the payload is the Array itself.
+func (d *data) Insert(index int, item interface{}) Result.Interface {
+	if index < 0 || index > len(d.value) {
+		return Result.New(
+			Result.WithError(Error.New("Array.Insert: index out of range")),
+		)
+	}
+	d.value = append(d.value, nil)
+	copy(d.value[index+1:], d.value[index:])
+	d.value[index] = item
+	return Result.New(
+		Result.WithPayload(Interface(d)),
+	)
+}
+
+// Delete removes the element at index, shifting the tail left. Out-of-range
+// indices yield an error Result; on success the payload is the removed item.
+func (d *data) Delete(index int) Result.Interface {
+	if index < 0 || index >= len(d.value) {
+		return Result.New(
+			Result.WithError(Error.New("Array.Delete: index out of range")),
+		)
+	}
+	item := d.value[index]
+	d.value = append(d.value[:index], d.value[index+1:]...)
+	return Result.New(
+		Result.WithPayload(item),
+	)
+}
+
+// Reverse reverses the Array in place; the payload is the Array itself.
+func (d *data) Reverse() Result.Interface {
+	for i, j := 0, len(d.value)-1; i < j; i, j = i+1, j-1 {
+		d.value[i], d.value[j] = d.value[j], d.value[i]
+	}
+	return Result.New(
+		Result.WithPayload(Interface(d)),
+	)
+}
+
+// IsNull reports that this is a real (non-null) Array.
+func (d data) IsNull() bool {
+	return false
 }
 
 /*
@@ -332,4 +415,115 @@ func (d *data) All(
 	pred func(int, interface{}) Result.Interface,
 ) Result.Interface {
 	return All(d.value, pred)
+}
+
+// null is the Null-Object variant of an Array: an empty, immutable placeholder
+// that honours the full Interface without ever being nil. Mutating methods are
+// no-ops returning a successful Result; lookups and queries return empty/false/
+// zero values.
+type null struct{}
+
+// Null returns the Null-Object Array.
+func Null() Interface {
+	return &null{}
+}
+
+func (n *null) Each(fn func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New()
+}
+
+func (n *null) Map(fn func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New(Result.WithPayload(Null()))
+}
+
+func (n *null) Filter(pred func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New(Result.WithPayload(Null()))
+}
+
+func (n *null) Reduce(
+	seed interface{},
+	fn func(acc, item interface{}) Result.Interface,
+) Result.Interface {
+	return Result.New(Result.WithPayload(seed))
+}
+
+func (n *null) Find(pred func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.Find: no matching item")),
+	)
+}
+
+func (n *null) Any(pred func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New(Result.WithPayload(false))
+}
+
+func (n *null) All(pred func(int, interface{}) Result.Interface) Result.Interface {
+	return Result.New(Result.WithPayload(true))
+}
+
+func (n *null) Push(item interface{}) Result.Interface {
+	return Result.New(Result.WithPayload(Interface(n)))
+}
+
+func (n *null) Pop() Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.Pop: empty array")),
+	)
+}
+
+func (n *null) First() Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.First: empty array")),
+	)
+}
+
+func (n *null) Fetch(index int) Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.Fetch: index out of range")),
+	)
+}
+
+func (n *null) Last() Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.Last: empty array")),
+	)
+}
+
+func (n *null) Clear() Result.Interface {
+	return Result.New()
+}
+
+func (n *null) Copy() Result.Interface {
+	return Result.New(Result.WithPayload(Null()))
+}
+
+func (n *null) Len() int {
+	return 0
+}
+
+func (n *null) IsEmpty() bool {
+	return true
+}
+
+func (n *null) Contains(item interface{}) Result.Interface {
+	return Result.New(Result.WithPayload(false))
+}
+
+func (n *null) Insert(index int, item interface{}) Result.Interface {
+	return Result.New(Result.WithPayload(Interface(n)))
+}
+
+func (n *null) Delete(index int) Result.Interface {
+	return Result.New(
+		Result.WithError(Error.New("Array.Delete: index out of range")),
+	)
+}
+
+func (n *null) Reverse() Result.Interface {
+	return Result.New(Result.WithPayload(Interface(n)))
+}
+
+// IsNull reports that this is the null Array.
+func (n *null) IsNull() bool {
+	return true
 }

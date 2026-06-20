@@ -66,8 +66,188 @@ func TestClear(t *testing.T) {
 
 func TestCopy(t *testing.T) {
 	a := New()
-	if a.Copy() == nil {
-		t.Fatal("Copy() returned nil")
+	a.Push("a")
+	a.Push("b")
+
+	res := a.Copy()
+	if res == nil || res.HasError() {
+		t.Fatal("Copy() returned nil or error")
+	}
+	cp := res.Payload().(Interface)
+
+	// Same contents.
+	if cp.Len() != 2 || cp.First().Payload() != "a" || cp.Last().Payload() != "b" {
+		t.Fatalf("Copy contents = %v..%v len %d", cp.First().Payload(), cp.Last().Payload(), cp.Len())
+	}
+
+	// Independence: mutating the copy must not affect the original.
+	cp.Push("c")
+	if a.Len() != 2 {
+		t.Fatalf("original len = %d after mutating copy, want 2", a.Len())
+	}
+	cp.Delete(0)
+	if a.First().Payload() != "a" {
+		t.Fatalf("original First() = %v after deleting from copy, want a", a.First().Payload())
+	}
+}
+
+func TestLenIsEmpty(t *testing.T) {
+	a := New()
+	if a.Len() != 0 || !a.IsEmpty() {
+		t.Fatal("new array should be empty with len 0")
+	}
+	a.Push(1)
+	if a.Len() != 1 || a.IsEmpty() {
+		t.Fatal("array with one item should have len 1 and not be empty")
+	}
+}
+
+func TestContains(t *testing.T) {
+	a := New()
+	a.Push(1)
+	a.Push([]int{2, 3})
+	if a.Contains(1).Payload() != true {
+		t.Fatal("Contains(1) want true")
+	}
+	if a.Contains([]int{2, 3}).Payload() != true {
+		t.Fatal("Contains deep slice want true")
+	}
+	if a.Contains(99).Payload() != false {
+		t.Fatal("Contains(99) want false")
+	}
+}
+
+func TestInsert(t *testing.T) {
+	a := New()
+	a.Push("a")
+	a.Push("c")
+	// Insert in the middle.
+	if r := a.Insert(1, "b"); r.HasError() {
+		t.Fatal("Insert(1) unexpected error")
+	}
+	if a.Fetch(1).Payload() != "b" || a.Len() != 3 {
+		t.Fatalf("after Insert middle = %v len %d", a.Fetch(1).Payload(), a.Len())
+	}
+	// Insert at the end (index == Len()).
+	if r := a.Insert(a.Len(), "d"); r.HasError() {
+		t.Fatal("Insert at end unexpected error")
+	}
+	if a.Last().Payload() != "d" {
+		t.Fatalf("after Insert end Last() = %v, want d", a.Last().Payload())
+	}
+	// Out of range.
+	if !a.Insert(-1, "x").HasError() {
+		t.Fatal("Insert(-1) want error")
+	}
+	if !a.Insert(a.Len()+1, "x").HasError() {
+		t.Fatal("Insert(>Len) want error")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	a := New()
+	a.Push("a")
+	a.Push("b")
+	a.Push("c")
+	r := a.Delete(1)
+	if r.HasError() || r.Payload() != "b" {
+		t.Fatalf("Delete(1) payload = %v", r.Payload())
+	}
+	if a.Len() != 2 || a.Fetch(1).Payload() != "c" {
+		t.Fatalf("after Delete = len %d, [1]=%v", a.Len(), a.Fetch(1).Payload())
+	}
+	if !a.Delete(-1).HasError() {
+		t.Fatal("Delete(-1) want error")
+	}
+	if !a.Delete(a.Len()).HasError() {
+		t.Fatal("Delete(Len) want error")
+	}
+}
+
+func TestReverse(t *testing.T) {
+	a := New()
+	a.Push(1)
+	a.Push(2)
+	a.Push(3)
+	if r := a.Reverse(); r.HasError() {
+		t.Fatal("Reverse unexpected error")
+	}
+	if a.First().Payload() != 3 || a.Last().Payload() != 1 {
+		t.Fatalf("after Reverse = %v..%v, want 3..1", a.First().Payload(), a.Last().Payload())
+	}
+}
+
+func TestIsNull(t *testing.T) {
+	if New().IsNull() {
+		t.Fatal("real array IsNull() want false")
+	}
+	if !Null().IsNull() {
+		t.Fatal("Null() IsNull() want true")
+	}
+}
+
+func TestNullVariant(t *testing.T) {
+	n := Null()
+
+	// Queries.
+	if n.Len() != 0 || !n.IsEmpty() {
+		t.Fatal("null Len/IsEmpty wrong")
+	}
+	if n.Contains(1).Payload() != false {
+		t.Fatal("null Contains want false")
+	}
+
+	// Mutating no-ops succeed.
+	for _, r := range []Result.Interface{
+		n.Push(1), n.Clear(), n.Insert(0, 1), n.Reverse(), n.Copy(),
+		n.Map(func(int, interface{}) Result.Interface { return okResult() }),
+		n.Filter(func(int, interface{}) Result.Interface { return okResult() }),
+		n.Each(func(int, interface{}) Result.Interface { return okResult() }),
+		n.Reduce(0, func(_, _ interface{}) Result.Interface { return okResult() }),
+	} {
+		if r.HasError() {
+			t.Fatal("null mutating/iter op unexpectedly errored")
+		}
+	}
+
+	// Reduce returns seed; Any false; All true.
+	if n.Reduce(7, func(_, _ interface{}) Result.Interface { return okResult() }).Payload() != 7 {
+		t.Fatal("null Reduce want seed 7")
+	}
+	if n.Any(func(int, interface{}) Result.Interface { return okResult() }).Payload() != false {
+		t.Fatal("null Any want false")
+	}
+	if n.All(func(int, interface{}) Result.Interface { return okResult() }).Payload() != true {
+		t.Fatal("null All want true")
+	}
+
+	// Map/Filter/Copy payloads are null Arrays.
+	if !n.Map(func(int, interface{}) Result.Interface { return okResult() }).Payload().(Interface).IsNull() {
+		t.Fatal("null Map payload should be null array")
+	}
+	if !n.Filter(func(int, interface{}) Result.Interface { return okResult() }).Payload().(Interface).IsNull() {
+		t.Fatal("null Filter payload should be null array")
+	}
+	if !n.Copy().Payload().(Interface).IsNull() {
+		t.Fatal("null Copy payload should be null array")
+	}
+	if !n.Push(1).Payload().(Interface).IsNull() {
+		t.Fatal("null Push payload should be null array")
+	}
+	if !n.Insert(0, 1).Payload().(Interface).IsNull() {
+		t.Fatal("null Insert payload should be null array")
+	}
+	if !n.Reverse().Payload().(Interface).IsNull() {
+		t.Fatal("null Reverse payload should be null array")
+	}
+
+	// Lookups/queries error or miss.
+	for _, r := range []Result.Interface{
+		n.Pop(), n.First(), n.Fetch(0), n.Last(), n.Delete(0), n.Find(func(int, interface{}) Result.Interface { return okResult() }),
+	} {
+		if !r.HasError() {
+			t.Fatal("null lookup op should error")
+		}
 	}
 }
 
