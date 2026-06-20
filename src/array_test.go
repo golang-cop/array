@@ -7,17 +7,18 @@ import (
 	Result "github.com/golang-cop/result/src"
 )
 
-// errResult builds a Result that reports HasError() == true so that the
-// Each iterators short-circuit on it. Because Result.HasError() is defined as
-// error.IsNull(), a fresh Result.New() already reports HasError() == true.
+// errResult builds a Result that reports HasError() == true so the Each
+// iterators short-circuit on it: Result.HasError() is defined as
+// !error.IsNull(), so a real (non-null) error makes it true.
 func errResult() Result.Interface {
-	return Result.New()
+	return Result.New(Result.WithError(Error.New("sentinel")))
 }
 
 // okResult builds a Result that reports HasError() == false, allowing Each to
-// continue iterating. It carries a non-null error sentinel.
+// continue iterating: a fresh Result.New() defaults to a NullError, whose
+// IsNull() is true, so HasError() is false.
 func okResult() Result.Interface {
-	return Result.New(Result.WithError(Error.New("sentinel")))
+	return Result.New()
 }
 
 func TestNew(t *testing.T) {
