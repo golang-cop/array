@@ -15,10 +15,34 @@ so failures (and short-circuits) are *values*, never panics or `nil`.
 go get github.com/go-composites/array
 ```
 
-## Access
+## Access & mutation
 
-`New()` → `Push`, `Pop`, `First`, `Last`, `Fetch(i)`, `Clear`, `Copy` — each
-returns a `Result.Interface`.
+`New()` returns an empty `Array`. Unless noted, each method returns a
+`Result.Interface`.
+
+| method | result payload | notes |
+| --- | --- | --- |
+| `Push(item)` | the `Array` | append to the end |
+| `Pop()` | the removed item | error `Result` on an empty `Array` |
+| `First()` | the first item | |
+| `Last()` | the last item | |
+| `Fetch(i)` | the item at `i` | |
+| `Insert(i, item)` | the `Array` | shift the tail right; valid `i` is `0..Len()` (append at `Len()`); out-of-range → error `Result` |
+| `Delete(i)` | the removed item | shift the tail left; out-of-range → error `Result` |
+| `Reverse()` | the `Array` | reverse in place |
+| `Clear()` | completion `Result` | drop all elements |
+| `Copy()` | a new `Array` | **deep copy** of the backing slice (independent of the receiver) |
+
+## Queries
+
+| method | returns | notes |
+| --- | --- | --- |
+| `Len()` | Go `int` | element count |
+| `IsEmpty()` | Go `bool` | `Len() == 0` |
+| `Contains(item)` | `Result` of Go `bool` | membership, via `reflect.DeepEqual` |
+| `IndexOf(item)` | `Result` of Go `int` | index of the first match, or `-1` |
+| `Slice(start, end)` | a new independent `Array` | elements `[start:end)`; out-of-range → error `Result` |
+| `Sort(less)` | the `Array` | stable sort in place (`sort.SliceStable`) |
 
 ## Combinators
 
@@ -39,6 +63,13 @@ Truthiness (for `Filter`/`Find`/`Any`/`All`) accepts a Go `bool`, any value with
 an `IsTrue() bool` method (e.g. a `Boolean.Interface`, matched *structurally* so
 `array` need not import — and cycle with — `boolean`), `nil` (falsy), and treats
 any other non-nil payload as truthy.
+
+## Null-Object
+
+`Null()` returns the never-nil Null-Object `Array`: an empty, immutable
+placeholder honouring the full `Interface`. `IsNull()` reports `true` for it and
+`false` for every concrete `Array`. Mutating methods are successful no-ops and
+queries return empty/`false`/zero values.
 
 ```go
 a := Array.New()
